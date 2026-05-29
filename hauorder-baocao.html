@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HauOrder — Báo Cáo</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --ocean: #0a3d62;
+  --ocean-mid: #1a6fa8;
+  --ocean-light: #3498db;
+  --pearl: #f0f8ff;
+  --shell: #e8f4fd;
+  --foam: #ffffff;
+  --ink: #0d2137;
+  --ink-mid: #2c5282;
+  --muted: #5a7fa0;
+  --border: #c8dff0;
+  --success: #00b894;
+  --warning: #f39c12;
+  --danger: #e17055;
+  --gold: #f9ca24;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Be Vietnam Pro',sans-serif; background:var(--pearl); color:var(--ink); min-height:100vh; }
+
+.header { background:linear-gradient(135deg,var(--ocean) 0%,var(--ocean-mid) 100%); position:sticky; top:0; z-index:100; box-shadow:0 4px 20px rgba(10,61,98,0.3); }
+.header-inner { max-width:1200px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:14px; }
+.logo { width:44px; height:44px; background:var(--gold); border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:21px; flex-shrink:0; }
+.header-title h1 { font-size:19px; font-weight:800; color:white; }
+.header-title p { font-size:11.5px; color:rgba(255,255,255,0.65); margin-top:1px; }
+.header-actions { margin-left:auto; display:flex; gap:10px; }
+.btn-h { padding:8px 14px; border-radius:18px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:'Be Vietnam Pro',sans-serif; transition:all 0.2s; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); color:white; }
+.btn-h:hover { background:rgba(255,255,255,0.2); }
+
+.tabs { background:var(--ocean); border-top:1px solid rgba(255,255,255,0.1); }
+.tabs-inner { max-width:1200px; margin:0 auto; padding:0 24px; display:flex; }
+.tab { padding:10px 16px; font-size:13px; font-weight:600; color:rgba(255,255,255,0.55); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; display:flex; align-items:center; gap:5px; }
+.tab:hover { color:rgba(255,255,255,0.9); }
+.tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+
+.main { max-width:1200px; margin:0 auto; padding:24px; }
+
+/* PERIOD SELECTOR */
+.period-bar { display:flex; align-items:center; gap:10px; margin-bottom:22px; flex-wrap:wrap; }
+.period-btn { padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:var(--foam); color:var(--muted); font-family:'Be Vietnam Pro',sans-serif; transition:all 0.2s; }
+.period-btn.active { background:var(--ocean); border-color:var(--ocean); color:white; }
+.period-btn:hover:not(.active) { border-color:var(--ocean-mid); color:var(--ocean); }
+.period-custom { display:flex; gap:8px; align-items:center; }
+.period-custom input { padding:8px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'Be Vietnam Pro',sans-serif; outline:none; color:var(--ink); }
+.period-custom input:focus { border-color:var(--ocean-mid); }
+.btn-load { padding:8px 16px; background:var(--ocean); color:white; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Be Vietnam Pro',sans-serif; transition:all 0.2s; }
+.btn-load:hover { background:var(--ocean-mid); }
+
+/* KPI CARDS */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.kpi-card { background:var(--foam); border:1px solid var(--border); border-radius:14px; padding:18px 20px; box-shadow:0 2px 8px rgba(10,61,98,0.07); position:relative; overflow:hidden; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--kpi-color,var(--ocean-light)); }
+.kpi-label { font-size:11.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
+.kpi-value { font-size:28px; font-weight:800; color:var(--ocean); line-height:1; }
+.kpi-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+.kpi-trend { position:absolute; top:16px; right:16px; font-size:12px; font-weight:700; padding:3px 8px; border-radius:8px; }
+.trend-up { background:rgba(0,184,148,0.12); color:#00956e; }
+.trend-down { background:rgba(225,112,85,0.12); color:#c0392b; }
+
+/* CHARTS */
+.charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+.chart-card { background:var(--foam); border:1px solid var(--border); border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(10,61,98,0.07); }
+.chart-card.full { grid-column:1/-1; }
+.chart-title { font-size:14px; font-weight:700; color:var(--ocean); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.chart-wrap { position:relative; height:240px; }
+
+/* TABLES */
+.table-card { background:var(--foam); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 2px 8px rgba(10,61,98,0.07); margin-bottom:20px; }
+.table-card-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.table-card-header h3 { font-size:14px; font-weight:700; color:var(--ocean); }
+.rpt-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+.rpt-table th { background:var(--shell); padding:10px 14px; text-align:left; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--ink-mid); border-bottom:1px solid var(--border); }
+.rpt-table td { padding:11px 14px; border-bottom:1px solid var(--border); }
+.rpt-table tr:last-child td { border-bottom:none; }
+.rpt-table tr:hover td { background:var(--shell); }
+.rank { font-size:13px; font-weight:800; color:var(--muted); }
+.rank.gold { color:#c8900a; }
+.rank.silver { color:#7f8c8d; }
+.rank.bronze { color:#a04000; }
+.bar-cell { display:flex; align-items:center; gap:10px; }
+.bar-bg { flex:1; height:8px; background:var(--shell); border-radius:4px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:4px; background:var(--ocean-light); transition:width 0.5s; }
+
+/* STATUS SUMMARY */
+.status-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:24px; }
+.status-box { background:var(--foam); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-align:center; }
+.status-box .sb-icon { font-size:24px; margin-bottom:6px; }
+.status-box .sb-num { font-size:22px; font-weight:800; color:var(--ocean); }
+.status-box .sb-label { font-size:11.5px; color:var(--muted); margin-top:2px; }
+
+.loading { text-align:center; padding:40px; color:var(--muted); }
+.empty { text-align:center; padding:30px; color:var(--muted); font-size:13.5px; }
+
+@media(max-width:900px) {
+  .kpi-grid { grid-template-columns:repeat(2,1fr); }
+  .charts-grid { grid-template-columns:1fr; }
+  .status-grid { grid-template-columns:repeat(3,1fr); }
+  .main { padding:14px; }
+}
+@media(max-width:600px) {
+  .kpi-grid { grid-template-columns:1fr 1fr; }
+  .status-grid { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">📊</div>
+    <div class="header-title">
+      <h1>Báo Cáo & Phân Tích</h1>
+      <p>Tổng hợp doanh số và hiệu suất</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-h" onclick="loadData()">🔄 Làm mới</button>
+      <button class="btn-h" onclick="window.location='dashboard.html'">📋 Dashboard</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tabs-inner">
+      <div class="tab" onclick="window.location='index.html'">✏️ Nhập đơn</div>
+      <div class="tab" onclick="window.location='dashboard.html'">📋 Danh sách</div>
+      <div class="tab" onclick="window.location='sanxuat.html'">🏭 Sản xuất</div>
+      <div class="tab" onclick="window.location='giaohang.html'">🚚 Giao hàng</div>
+      <div class="tab active">📊 Báo cáo</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PERIOD -->
+  <div class="period-bar">
+    <button class="period-btn" onclick="setPeriod('today')">Hôm nay</button>
+    <button class="period-btn" onclick="setPeriod('week')">7 ngày qua</button>
+    <button class="period-btn active" id="btnMonth" onclick="setPeriod('month')">Tháng này</button>
+    <button class="period-btn" onclick="setPeriod('quarter')">Quý này</button>
+    <div class="period-custom">
+      <input type="date" id="dateFrom">
+      <span style="color:var(--muted);font-size:13px">→</span>
+      <input type="date" id="dateTo">
+      <button class="btn-load" onclick="setPeriod('custom')">Xem</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--kpi-color:#3498db">
+      <div class="kpi-label">Tổng đơn hàng</div>
+      <div class="kpi-value" id="kpiTotal">—</div>
+      <div class="kpi-sub" id="kpiTotalSub">kỳ này</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#00b894">
+      <div class="kpi-label">Doanh thu</div>
+      <div class="kpi-value" id="kpiRevenue">—</div>
+      <div class="kpi-sub" id="kpiRevSub">tổng giá trị</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#f39c12">
+      <div class="kpi-label">Tỉ lệ hoàn thành</div>
+      <div class="kpi-value" id="kpiRate">—</div>
+      <div class="kpi-sub" id="kpiRateSub">đơn đã giao / tổng</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#9b59b6">
+      <div class="kpi-label">Giá trị TB / đơn</div>
+      <div class="kpi-value" id="kpiAvg">—</div>
+      <div class="kpi-sub">trung bình mỗi đơn</div>
+    </div>
+  </div>
+
+  <!-- STATUS SUMMARY -->
+  <div class="status-grid">
+    <div class="status-box"><div class="sb-icon">📥</div><div class="sb-num" id="sNew">—</div><div class="sb-label">Mới nhận</div></div>
+    <div class="status-box"><div class="sb-icon">⚙️</div><div class="sb-num" id="sProc">—</div><div class="sb-label">Đang SX</div></div>
+    <div class="status-box"><div class="sb-icon">🚚</div><div class="sb-num" id="sShip">—</div><div class="sb-label">Đang giao</div></div>
+    <div class="status-box"><div class="sb-icon">✅</div><div class="sb-num" id="sDone">—</div><div class="sb-label">Hoàn thành</div></div>
+    <div class="status-box"><div class="sb-icon">❌</div><div class="sb-num" id="sCancel">—</div><div class="sb-label">Đã hủy</div></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">📈 Đơn hàng theo ngày</div>
+      <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🏪 Doanh thu theo kênh</div>
+      <div class="chart-wrap"><canvas id="chartChannel"></canvas></div>
+    </div>
+    <div class="chart-card full">
+      <div class="chart-title">🦪 Sản phẩm bán chạy (số lượng)</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="chartProduct"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TOP KHÁCH HÀNG -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <h3>🏆 Top khách hàng</h3>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="rpt-table">
+        <thead><tr><th>#</th><th>Khách hàng</th><th>Số đơn</th><th>Doanh thu</th><th>Tỉ trọng</th></tr></thead>
+        <tbody id="topCustomers"><tr><td colspan="5" class="loading">Đang tải...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CHI TIẾT ĐƠN -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <h3>📋 Chi tiết đơn hàng kỳ này</h3>
+      <span id="detailCount" style="font-size:12.5px;color:var(--muted)"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="rpt-table">
+        <thead><tr><th>Mã</th><th>Khách hàng</th><th>Ngày giao</th><th>Giá trị</th><th>Trạng thái</th></tr></thead>
+        <tbody id="detailTable"><tr><td colspan="5" class="loading">Đang tải...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SB_URL = 'https://qypxbomomhrfskfwjhid.supabase.co';
+const SB_KEY = 'sb_publishable__-gEe6Tl9zX6Detpskn31A_r_8hnm7J';
+const { createClient } = supabase;
+const db = createClient(SB_URL, SB_KEY);
+
+const CH_LABEL = { go:'GO!', winmart:'WinMart', lotte:'Lotte', aeon:'AEON', mega:'Mega', nhole:'Nhỏ lẻ' };
+const ST_LABEL = { new:'Mới nhận', processing:'Đang SX', shipped:'Đang giao', done:'Hoàn thành', delivered:'Đã giao', cancelled:'Đã hủy' };
+const ST_COLOR = { new:'#3498db', processing:'#f39c12', shipped:'#9b59b6', done:'#00b894', delivered:'#00b894', cancelled:'#e17055' };
+
+let charts = {};
+let currentFrom = '', currentTo = '';
+
+function getToday() { return new Date().toISOString().split('T')[0]; }
+function addDays(d, n) { const dt = new Date(d); dt.setDate(dt.getDate()+n); return dt.toISOString().split('T')[0]; }
+
+function setPeriod(type) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  const today = getToday();
+  if (type === 'today') { currentFrom = today; currentTo = today; }
+  else if (type === 'week') { currentFrom = addDays(today,-6); currentTo = today; }
+  else if (type === 'month') {
+    const d = new Date(); currentFrom = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; currentTo = today;
+    document.getElementById('btnMonth').classList.add('active');
+  }
+  else if (type === 'quarter') {
+    const d = new Date(); const q = Math.floor(d.getMonth()/3);
+    currentFrom = `${d.getFullYear()}-${String(q*3+1).padStart(2,'0')}-01`; currentTo = today;
+  }
+  else if (type === 'custom') {
+    currentFrom = document.getElementById('dateFrom').value;
+    currentTo = document.getElementById('dateTo').value;
+    if (!currentFrom || !currentTo) { alert('Vui lòng chọn đủ ngày!'); return; }
+  }
+  loadData();
+}
+
+async function loadData() {
+  if (!currentFrom) setPeriod('month');
+  try {
+    const { data, error } = await db
+      .from('hauorder_orders')
+      .select('*')
+      .gte('order_date', currentFrom)
+      .lte('order_date', currentTo)
+      .order('order_date', { ascending: true });
+    if (error) throw error;
+    renderAll(data || []);
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function renderAll(orders) {
+  renderKPI(orders);
+  renderStatus(orders);
+  renderChartDaily(orders);
+  renderChartChannel(orders);
+  renderChartProduct(orders);
+  renderTopCustomers(orders);
+  renderDetailTable(orders);
+}
+
+function fmt(n) {
+  if (n >= 1e9) return (n/1e9).toFixed(1) + ' tỷ';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + ' tr';
+  if (n >= 1e3) return (n/1e3).toFixed(0) + 'k';
+  return n.toLocaleString('vi-VN');
+}
+
+function renderKPI(orders) {
+  const total = orders.length;
+  const revenue = orders.reduce((s,o) => s + (o.total_amount||0), 0);
+  const done = orders.filter(o => o.status === 'done' || o.status === 'delivered').length;
+  const rate = total > 0 ? Math.round(done/total*100) : 0;
+  const avg = total > 0 ? Math.round(revenue/total) : 0;
+  document.getElementById('kpiTotal').textContent = total;
+  document.getElementById('kpiRevenue').textContent = fmt(revenue) + ' đ';
+  document.getElementById('kpiRate').textContent = rate + '%';
+  document.getElementById('kpiAvg').textContent = fmt(avg) + ' đ';
+}
+
+function renderStatus(orders) {
+  ['new','processing','shipped','done','cancelled'].forEach(s => {
+    const id = {new:'sNew',processing:'sProc',shipped:'sShip',done:'sDone',cancelled:'sCancel'}[s];
+    document.getElementById(id).textContent = orders.filter(o => o.status === s).length;
+  });
+}
+
+function renderChartDaily(orders) {
+  const map = {};
+  orders.forEach(o => { const d = o.order_date || ''; map[d] = (map[d]||0)+1; });
+  const labels = Object.keys(map).sort();
+  const values = labels.map(l => map[l]);
+  destroyChart('chartDaily');
+  charts['chartDaily'] = new Chart(document.getElementById('chartDaily'), {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Số đơn', data:values, backgroundColor:'rgba(52,152,219,0.7)', borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }
+  });
+}
+
+function renderChartChannel(orders) {
+  const map = {};
+  orders.forEach(o => { const c = CH_LABEL[o.channel]||o.channel||'Khác'; map[c] = (map[c]||0)+(o.total_amount||0); });
+  const labels = Object.keys(map);
+  const values = labels.map(l => map[l]);
+  const colors = ['#3498db','#00b894','#f39c12','#e17055','#9b59b6','#1abc9c'];
+  destroyChart('chartChannel');
+  charts['chartChannel'] = new Chart(document.getElementById('chartChannel'), {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data:values, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{size:12}, boxWidth:14 } } } }
+  });
+}
+
+function renderChartProduct(orders) {
+  const map = {};
+  orders.forEach(o => {
+    let prods = [];
+    try { prods = JSON.parse(o.products||'[]'); } catch(e) {}
+    prods.forEach(p => { const n = p.name?.substring(0,30)||'?'; map[n] = (map[n]||0)+(p.qty||0); });
+  });
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const labels = sorted.map(x=>x[0]);
+  const values = sorted.map(x=>x[1]);
+  destroyChart('chartProduct');
+  charts['chartProduct'] = new Chart(document.getElementById('chartProduct'), {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Số lượng', data:values, backgroundColor:'rgba(0,184,148,0.7)', borderRadius:6 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{beginAtZero:true} } }
+  });
+}
+
+function renderTopCustomers(orders) {
+  const map = {};
+  orders.forEach(o => {
+    const c = o.customer||'?';
+    if (!map[c]) map[c] = {count:0, revenue:0};
+    map[c].count++;
+    map[c].revenue += o.total_amount||0;
+  });
+  const sorted = Object.entries(map).sort((a,b)=>b[1].revenue-a[1].revenue).slice(0,10);
+  const maxRev = sorted[0]?.[1]?.revenue || 1;
+  const totalRev = orders.reduce((s,o)=>s+(o.total_amount||0),0);
+  const rankClass = ['gold','silver','bronze'];
+  document.getElementById('topCustomers').innerHTML = sorted.length === 0
+    ? `<tr><td colspan="5" class="empty">Chưa có dữ liệu</td></tr>`
+    : sorted.map(([name,d],i) => `<tr>
+        <td><span class="rank ${rankClass[i]||''}">${i+1}</span></td>
+        <td><strong>${name}</strong></td>
+        <td>${d.count}</td>
+        <td><strong>${fmt(d.revenue)} đ</strong></td>
+        <td><div class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(d.revenue/maxRev*100)}%"></div></div><span style="font-size:12px;color:var(--muted);white-space:nowrap">${totalRev>0?Math.round(d.revenue/totalRev*100):0}%</span></div></td>
+      </tr>`).join('');
+}
+
+function renderDetailTable(orders) {
+  document.getElementById('detailCount').textContent = `${orders.length} đơn`;
+  document.getElementById('detailTable').innerHTML = orders.length === 0
+    ? `<tr><td colspan="5" class="empty">Không có đơn hàng nào trong kỳ này</td></tr>`
+    : [...orders].reverse().map(o => {
+        const st = ST_LABEL[o.status] || o.status;
+        const color = ST_COLOR[o.status] || '#999';
+        return `<tr>
+          <td><strong style="color:var(--ocean)">#${o.id}</strong></td>
+          <td>${o.customer||'—'}</td>
+          <td>${o.delivery_date||'—'}</td>
+          <td><strong>${fmt(o.total_amount||0)} đ</strong></td>
+          <td><span style="font-size:12px;font-weight:700;color:${color}">${st}</span></td>
+        </tr>`;
+      }).join('');
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// Init
+const today = new Date();
+const firstDay = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+currentFrom = firstDay;
+currentTo = today.toISOString().split('T')[0];
+document.getElementById('dateFrom').value = currentFrom;
+document.getElementById('dateTo').value = currentTo;
+loadData();
+</script>
+</body>
+</html>
