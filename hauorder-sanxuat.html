@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HauOrder — Lệnh Sản Xuất</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --ocean: #0a3d62;
+  --ocean-mid: #1a6fa8;
+  --ocean-light: #3498db;
+  --pearl: #f0f8ff;
+  --shell: #e8f4fd;
+  --foam: #ffffff;
+  --ink: #0d2137;
+  --ink-mid: #2c5282;
+  --muted: #5a7fa0;
+  --border: #c8dff0;
+  --success: #00b894;
+  --warning: #f39c12;
+  --danger: #e17055;
+  --gold: #f9ca24;
+  --factory-bg: #0d1f2d;
+  --factory-card: #162635;
+  --factory-border: #1e3a52;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Be Vietnam Pro',sans-serif; background:var(--factory-bg); color:white; min-height:100vh; }
+
+/* HEADER */
+.header { background:linear-gradient(135deg,#0d1f2d 0%,#1a3a52 100%); border-bottom:2px solid var(--gold); padding:0; position:sticky; top:0; z-index:100; }
+.header-inner { max-width:1100px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:14px; }
+.logo { width:46px; height:46px; background:var(--gold); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; box-shadow:0 4px 16px rgba(249,202,36,0.4); }
+.header-title h1 { font-size:20px; font-weight:800; color:white; }
+.header-title p { font-size:12px; color:rgba(255,255,255,0.6); margin-top:2px; }
+.header-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+.clock { font-size:22px; font-weight:800; color:var(--gold); font-variant-numeric:tabular-nums; }
+.date-display { font-size:12px; color:rgba(255,255,255,0.6); text-align:right; }
+.btn-header { padding:8px 16px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); color:white; font-family:'Be Vietnam Pro',sans-serif; transition:all 0.2s; }
+.btn-header:hover { background:rgba(255,255,255,0.15); }
+
+/* TABS */
+.tabs { background:#0d1f2d; border-bottom:1px solid var(--factory-border); }
+.tabs-inner { max-width:1100px; margin:0 auto; padding:0 24px; display:flex; }
+.tab { padding:10px 18px; font-size:13px; font-weight:600; color:rgba(255,255,255,0.45); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; display:flex; align-items:center; gap:6px; }
+.tab:hover { color:rgba(255,255,255,0.8); }
+.tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+
+/* MAIN */
+.main { max-width:1100px; margin:0 auto; padding:24px; }
+
+/* SUMMARY BAR */
+.summary-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.sum-card { background:var(--factory-card); border:1px solid var(--factory-border); border-radius:14px; padding:16px 18px; display:flex; align-items:center; gap:14px; }
+.sum-icon { width:46px; height:46px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.sum-icon.yellow { background:rgba(249,202,36,0.15); }
+.sum-icon.orange { background:rgba(243,156,18,0.15); }
+.sum-icon.blue { background:rgba(52,152,219,0.15); }
+.sum-icon.green { background:rgba(0,184,148,0.15); }
+.sum-num { font-size:28px; font-weight:800; color:white; line-height:1; }
+.sum-label { font-size:11.5px; color:rgba(255,255,255,0.5); margin-top:3px; }
+
+/* DATE FILTER */
+.date-bar { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+.date-btn { padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--factory-border); background:var(--factory-card); color:rgba(255,255,255,0.6); font-family:'Be Vietnam Pro',sans-serif; transition:all 0.2s; }
+.date-btn:hover, .date-btn.active { background:var(--gold); border-color:var(--gold); color:var(--ocean); }
+.date-input { padding:8px 14px; border-radius:20px; border:1px solid var(--factory-border); background:var(--factory-card); color:white; font-size:13px; font-family:'Be Vietnam Pro',sans-serif; outline:none; }
+
+/* SECTION LABEL */
+.section-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.4); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.section-label::after { content:''; flex:1; height:1px; background:var(--factory-border); }
+
+/* ORDER CARDS */
+.orders-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-bottom:28px; }
+
+.order-card { background:var(--factory-card); border:1px solid var(--factory-border); border-radius:16px; overflow:hidden; transition:transform 0.2s, box-shadow 0.2s; position:relative; }
+.order-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+
+.order-card.urgent { border-color:rgba(225,112,85,0.5); }
+.order-card.urgent::before { content:'⚠️ GẤP'; position:absolute; top:12px; right:12px; background:var(--danger); color:white; font-size:10px; font-weight:800; padding:3px 8px; border-radius:10px; letter-spacing:0.5px; }
+
+.card-top { padding:16px 18px 12px; border-bottom:1px solid var(--factory-border); }
+.card-customer { font-size:16px; font-weight:800; color:white; margin-bottom:4px; }
+.card-meta { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.card-po { font-size:11.5px; color:rgba(255,255,255,0.45); }
+.card-ch { font-size:11px; font-weight:600; background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:6px; color:rgba(255,255,255,0.7); }
+
+.card-body { padding:14px 18px; }
+.product-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+.product-row:last-child { border-bottom:none; }
+.prod-icon { font-size:20px; flex-shrink:0; }
+.prod-info { flex:1; }
+.prod-name { font-size:13.5px; font-weight:600; color:white; }
+.prod-spec { font-size:11.5px; color:rgba(255,255,255,0.5); margin-top:2px; }
+.prod-qty { font-size:20px; font-weight:800; color:var(--gold); white-space:nowrap; }
+.prod-unit { font-size:11px; color:rgba(255,255,255,0.5); }
+
+.card-footer { padding:12px 18px; background:rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.delivery-info { display:flex; align-items:center; gap:8px; }
+.delivery-date { font-size:14px; font-weight:700; color:white; }
+.delivery-time { font-size:12px; color:rgba(255,255,255,0.5); }
+.delivery-addr { font-size:11px; color:rgba(255,255,255,0.4); margin-top:2px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.btn-done-card { padding:9px 18px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; border:none; font-family:'Be Vietnam Pro',sans-serif; transition:all 0.2s; background:rgba(0,184,148,0.15); color:#00d4a8; border:1px solid rgba(0,184,148,0.3); flex-shrink:0; }
+.btn-done-card:hover { background:rgba(0,184,148,0.3); }
+.btn-done-card.processing { background:rgba(243,156,18,0.15); color:#f39c12; border-color:rgba(243,156,18,0.3); }
+
+/* DONE SECTION */
+.done-list { display:flex; flex-direction:column; gap:10px; }
+.done-item { background:var(--factory-card); border:1px solid var(--factory-border); border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:14px; opacity:0.7; }
+.done-check { font-size:22px; flex-shrink:0; }
+.done-info { flex:1; }
+.done-customer { font-size:14px; font-weight:700; color:white; }
+.done-detail { font-size:12px; color:rgba(255,255,255,0.45); margin-top:2px; }
+.done-time { font-size:11.5px; color:rgba(0,184,148,0.8); font-weight:600; white-space:nowrap; }
+
+/* EMPTY */
+.empty-state { text-align:center; padding:48px 24px; color:rgba(255,255,255,0.3); }
+.empty-state .ei { font-size:52px; margin-bottom:12px; }
+
+/* LOADING */
+.loading { text-align:center; padding:40px; color:rgba(255,255,255,0.4); }
+
+@media(max-width:700px) {
+  .summary-bar { grid-template-columns:repeat(2,1fr); }
+  .main { padding:12px; }
+  .orders-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">🏭</div>
+    <div class="header-title">
+      <h1>Lệnh Sản Xuất</h1>
+      <p>Nhà máy chế biến Hàu — Hạ Long</p>
+    </div>
+    <div class="header-right">
+      <div>
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="date-display" id="dateDisplay">--/--/----</div>
+      </div>
+      <button class="btn-header" onclick="loadOrders()">🔄 Làm mới</button>
+      <button class="btn-header" onclick="window.location='dashboard.html'">📋 Dashboard</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tabs-inner">
+      <div class="tab" onclick="window.location='index.html'">✏️ Nhập đơn</div>
+      <div class="tab" onclick="window.location='dashboard.html'">📋 Danh sách</div>
+      <div class="tab active">🏭 Lệnh sản xuất</div>
+      <div class="tab">📊 Báo cáo</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SUMMARY -->
+  <div class="summary-bar">
+    <div class="sum-card">
+      <div class="sum-icon yellow">📋</div>
+      <div>
+        <div class="sum-num" id="sumTotal">—</div>
+        <div class="sum-label">Lệnh hôm nay</div>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon orange">⚙️</div>
+      <div>
+        <div class="sum-num" id="sumPending">—</div>
+        <div class="sum-label">Chờ sản xuất</div>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon blue">🔄</div>
+      <div>
+        <div class="sum-num" id="sumProcessing">—</div>
+        <div class="sum-label">Đang làm</div>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon green">✅</div>
+      <div>
+        <div class="sum-num" id="sumDone">—</div>
+        <div class="sum-label">Hoàn thành</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATE FILTER -->
+  <div class="date-bar">
+    <button class="date-btn active" id="btnToday" onclick="setDateFilter('today')">📅 Hôm nay</button>
+    <button class="date-btn" id="btnTomorrow" onclick="setDateFilter('tomorrow')">📅 Ngày mai</button>
+    <button class="date-btn" id="btnAll" onclick="setDateFilter('all')">📋 Tất cả</button>
+    <input type="date" class="date-input" id="customDate" onchange="setDateFilter('custom')" title="Chọn ngày cụ thể">
+  </div>
+
+  <!-- PENDING ORDERS -->
+  <div class="section-label">⚡ Cần sản xuất</div>
+  <div class="orders-grid" id="pendingGrid">
+    <div class="loading">⏳ Đang tải...</div>
+  </div>
+
+  <!-- DONE ORDERS -->
+  <div class="section-label">✅ Đã hoàn thành hôm nay</div>
+  <div class="done-list" id="doneList">
+    <div class="loading" style="font-size:13px">Đang tải...</div>
+  </div>
+
+</div>
+
+<script>
+const SB_URL = 'https://qypxbomomhrfskfwjhid.supabase.co';
+const SB_KEY = 'sb_publishable__-gEe6Tl9zX6Detpskn31A_r_8hnm7J';
+const { createClient } = supabase;
+const db = createClient(SB_URL, SB_KEY);
+
+let allOrders = [];
+let dateFilter = 'today';
+
+const CH_MAP = {
+  go:'GO!', winmart:'WinMart', lotte:'Lotte', aeon:'AEON', mega:'Mega', nhole:'Nhỏ lẻ'
+};
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('vi-VN');
+  document.getElementById('dateDisplay').textContent = now.toLocaleDateString('vi-VN', {weekday:'long', day:'2-digit', month:'2-digit', year:'numeric'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function getToday() { return new Date().toISOString().split('T')[0]; }
+function getTomorrow() {
+  const d = new Date(); d.setDate(d.getDate()+1);
+  return d.toISOString().split('T')[0];
+}
+
+function setDateFilter(type) {
+  dateFilter = type;
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  if (type === 'today') document.getElementById('btnToday').classList.add('active');
+  else if (type === 'tomorrow') document.getElementById('btnTomorrow').classList.add('active');
+  else if (type === 'all') document.getElementById('btnAll').classList.add('active');
+  renderOrders();
+}
+
+async function loadOrders() {
+  try {
+    const { data, error } = await db
+      .from('hauorder_orders')
+      .select('*')
+      .not('status', 'eq', 'cancelled')
+      .order('delivery_date', { ascending: true })
+      .order('delivery_time', { ascending: true });
+    if (error) throw error;
+    allOrders = data || [];
+    renderStats();
+    renderOrders();
+  } catch(e) {
+    document.getElementById('pendingGrid').innerHTML =
+      `<div style="color:var(--danger);padding:20px">❌ Lỗi: ${e.message}</div>`;
+  }
+}
+
+function renderStats() {
+  const today = getToday();
+  const todayOrders = allOrders.filter(o => o.delivery_date === today);
+  document.getElementById('sumTotal').textContent = todayOrders.length;
+  document.getElementById('sumPending').textContent = todayOrders.filter(o => o.status === 'new').length;
+  document.getElementById('sumProcessing').textContent = todayOrders.filter(o => o.status === 'processing').length;
+  document.getElementById('sumDone').textContent = todayOrders.filter(o => o.status === 'done').length;
+}
+
+function isUrgent(order) {
+  if (!order.delivery_date) return false;
+  const now = new Date();
+  const delivery = new Date(order.delivery_date + (order.delivery_time ? 'T'+order.delivery_time : 'T23:59'));
+  const hoursLeft = (delivery - now) / 3600000;
+  return hoursLeft <= 12 && hoursLeft > 0;
+}
+
+function renderOrders() {
+  const today = getToday();
+  const tomorrow = getTomorrow();
+  const customDate = document.getElementById('customDate').value;
+
+  let filtered = allOrders.filter(o => {
+    if (dateFilter === 'today') return o.delivery_date === today;
+    if (dateFilter === 'tomorrow') return o.delivery_date === tomorrow;
+    if (dateFilter === 'custom' && customDate) return o.delivery_date === customDate;
+    return true; // all
+  });
+
+  const pending = filtered.filter(o => o.status === 'new' || o.status === 'processing');
+  const done = filtered.filter(o => o.status === 'done');
+
+  // Render pending
+  const grid = document.getElementById('pendingGrid');
+  if (pending.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="ei">🎉</div><p>Không có lệnh nào cần sản xuất!</p></div>`;
+  } else {
+    grid.innerHTML = pending.map(o => renderOrderCard(o)).join('');
+  }
+
+  // Render done
+  const doneList = document.getElementById('doneList');
+  if (done.length === 0) {
+    doneList.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:12px 0">Chưa có lệnh nào hoàn thành.</div>`;
+  } else {
+    doneList.innerHTML = done.map(o => {
+      let products = [];
+      try { products = JSON.parse(o.products || '[]'); } catch(e) {}
+      const summary = products.map(p => `${p.qty} ${p.unit} ${p.name.substring(0,25)}`).join(' + ');
+      return `<div class="done-item">
+        <div class="done-check">✅</div>
+        <div class="done-info">
+          <div class="done-customer">${o.customer}</div>
+          <div class="done-detail">${summary}</div>
+        </div>
+        <div class="done-time">Hoàn thành</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderOrderCard(o) {
+  let products = [];
+  try { products = JSON.parse(o.products || '[]'); } catch(e) {}
+  const urgent = isUrgent(o);
+  const isProcessing = o.status === 'processing';
+  const ch = CH_MAP[o.channel] || o.channel || '';
+
+  const prodRows = products.map(p => `
+    <div class="product-row">
+      <div class="prod-icon">🦪</div>
+      <div class="prod-info">
+        <div class="prod-name">${p.name}</div>
+        <div class="prod-spec">${p.spec || ''}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="prod-qty">${p.qty}</div>
+        <div class="prod-unit">${p.unit}</div>
+      </div>
+    </div>
+  `).join('');
+
+  return `<div class="order-card ${urgent ? 'urgent' : ''}">
+    <div class="card-top">
+      <div class="card-customer">${o.customer}</div>
+      <div class="card-meta">
+        <span class="card-po">#${o.id} ${o.po_number ? '· PO: '+o.po_number : ''}</span>
+        <span class="card-ch">${ch}</span>
+      </div>
+    </div>
+    <div class="card-body">${prodRows}</div>
+    <div class="card-footer">
+      <div class="delivery-info">
+        <div>
+          <div class="delivery-date">📅 ${o.delivery_date || '—'} ${o.delivery_time ? '⏰ '+o.delivery_time : ''}</div>
+          <div class="delivery-addr">📍 ${o.delivery_address || '—'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        ${!isProcessing ? `<button class="btn-done-card processing" onclick="updateStatus(${o.id},'processing')">▶ Bắt đầu</button>` : ''}
+        <button class="btn-done-card" onclick="updateStatus(${o.id},'done')">✅ Xong</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function updateStatus(id, status) {
+  const label = status === 'processing' ? 'bắt đầu sản xuất' : 'hoàn thành';
+  if (!confirm(`Xác nhận ${label} đơn hàng này?`)) return;
+  try {
+    const { error } = await db.from('hauorder_orders').update({ status }).eq('id', id);
+    if (error) throw error;
+    allOrders = allOrders.map(o => o.id === id ? {...o, status} : o);
+    renderStats();
+    renderOrders();
+  } catch(e) {
+    alert('❌ Lỗi: ' + e.message);
+  }
+}
+
+loadOrders();
+setInterval(loadOrders, 30000); // refresh mỗi 30 giây
+</script>
+</body>
+</html>
