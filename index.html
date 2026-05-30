@@ -841,17 +841,21 @@ async function submitOrder() {
         </a>
       </p>`;
 
-    fetch('https://api.resend.com/emails', {
+    fetch('https://formspree.io/f/xlgvvqrn', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer re_YhKLN86f_4CXVZAFHToaeMxd92h5Kjyo8'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'HauOrder <onboarding@resend.dev>',
-        to: ['hung1252@gmail.com'],
-        subject: `🦪 Đơn mới: ${customer} — Giao ${deliveryDate}`,
-        html: emailHtml
+        subject: 'Don moi: ' + customer + ' - Giao ' + deliveryDate,
+        customer: customer,
+        kenh: CH_LABEL[selectedChannel||'nhole']||'Khac',
+        ma_po: poNumber||'—',
+        ngay_dat: orderDate,
+        ngay_giao: deliveryDate,
+        dia_chi: deliveryAddress,
+        tong_tien: total.toLocaleString('vi-VN') + ' d',
+        san_pham: products.map(p => p.qty + ' ' + p.unit + ' - ' + p.name).join(' | '),
+        ghi_chu: document.getElementById('notes').value.trim() || '—',
+        dashboard: 'https://hauorder.pages.dev/dashboard.html'
       })
     }).catch(() => {});
 
