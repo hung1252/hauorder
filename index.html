@@ -819,6 +819,38 @@ async function submitOrder() {
 
     if (error) throw error;
 
+    // Gửi thông báo Zalo qua Make.com webhook
+    const MAKE_WEBHOOK = 'https://hook.eu1.make.com/3dbetzi0y5gkak50soglqraqellkseun';
+    const CH_LABEL = { go:'GO!', winmart:'WinMart', lotte:'Lotte Mart', aeon:'AEON', mega:'Mega Market', nhole:'Khách nhỏ lẻ' };
+    const prodList = products.map(p => `  • ${p.qty} ${p.unit} ${p.name}`).join('\n');
+    const zaloMsg = `🦪 ĐƠN HÀNG MỚI - HauOrder
+━━━━━━━━━━━━━━━━━━
+👤 Khách: ${customer}
+📦 Kênh: ${CH_LABEL[selectedChannel||'nhole']||'Khác'}
+📋 Mã PO: ${poNumber||'—'}
+📅 Ngày đặt: ${orderDate}
+🚚 Ngày giao: ${deliveryDate}${document.getElementById('deliveryTime').value ? ' ⏰ '+document.getElementById('deliveryTime').value : ''}
+📍 Địa chỉ: ${deliveryAddress}
+━━━━━━━━━━━━━━━━━━
+🛒 Sản phẩm:
+${prodList}
+━━━━━━━━━━━━━━━━━━
+💰 Tổng: ${total.toLocaleString('vi-VN')} đ
+📝 Ghi chú: ${document.getElementById('notes').value.trim() || '—'}`;
+
+    fetch(MAKE_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: zaloMsg,
+        customer,
+        channel: selectedChannel || 'nhole',
+        delivery_date: deliveryDate,
+        total,
+        phone: '0913265374'
+      })
+    }).catch(() => {}); // Không chặn nếu webhook lỗi
+
     showStatus('success', `Đơn hàng của ${customer} đã được gửi thành công! Nhà máy sẽ nhận lệnh ngay.`);
     setTimeout(() => resetForm(), 2000);
 
